@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Description;
+using Newtonsoft.Json;
 using WeatherApi.Models;
 
 namespace WeatherApi.Controllers
@@ -18,10 +19,12 @@ namespace WeatherApi.Controllers
         private readonly WeatherApiContext db = new WeatherApiContext();
 
         // GET: api/Weather
-        public IQueryable<weather> GetWeatherModels()
+        public string GetWeatherModels()
         {
-            var weather = db.Weather.Select(x => x);
+            //var weather = db.Weather.Select(x => x);
 
+            var weather = (from w in db.Weather
+                select w).ToList();
             //var weather = weatherlist.Select(s => new weather()
             //{
             //    idweather = s.idweather,
@@ -31,20 +34,28 @@ namespace WeatherApi.Controllers
             //    time = s.time
             //});
 
-            return weather;
+            var weatherJson = JsonConvert.SerializeObject(weather.ToArray());
+
+            return weatherJson;
         }
 
         // GET: api/Weather/5
         [ResponseType(typeof(weather))]
-        public async Task<IHttpActionResult> GetWeatherModel(int id)
+        public async Task<IHttpActionResult> GetByDay(DateTime day)
         {
-            weather weatherModel = await db.Weather.FindAsync(id);
+            var previousWeek = day.AddDays(-14);
+
+            var weatherModel = await (from w in db.Weather
+                where w.time >= previousWeek
+                select w).ToListAsync();
+
             if (weatherModel == null)
             {
                 return NotFound();
             }
 
-            return Ok(weatherModel);
+            var weatherJson = JsonConvert.SerializeObject(weatherModel.ToArray());
+            return Ok(weatherJson);
         }
 
         // PUT: api/Weather/5
